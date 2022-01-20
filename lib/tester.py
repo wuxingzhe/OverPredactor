@@ -1,3 +1,4 @@
+from numpy.lib.npyio import save
 from lib.trainer import Trainer
 import os, torch
 from tqdm import tqdm
@@ -58,6 +59,55 @@ class IndoorTester(Trainer):
 
                 torch.save(data,f'{self.snapshot_dir}/{self.config.benchmark}/{idx}.pth')
 
+class KITTIExtractor(Trainer):
+    def __init__(self,args):
+        Trainer.__init__(self,args)
+
+    def test(self):
+        save_path = os.path.join(self.config.root, 'results_kpconv')
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        for id_name in range(11):
+            id_name = str(id_name).zfill(2)
+            os.makedirs(os.path.join(save_path, id_name))
+        print('Start to represetations on KITTI datasets on: '+save_path)
+        tsfm_est = []
+        num_iter = int(len(self.loader['test'].dataset) // self.loader['test'].batch_size)
+        c_loader_iter = self.loader['test'].__iter__()
+
+        self.model.eval()
+        rot_gt, trans_gt =[],[]
+        with torch.no_grad():
+            for _ in tqdm(range(num_iter)): # loop through this epoch
+                inputs = c_loader_iter.next()
+                ###############################################
+                # forward pass
+                for k, v in inputs.items():  
+                    if k == 'key':
+                        continue
+                    elif type(v) == list:
+                        inputs[k] = [item.to(self.device) for item in v]
+                    else:
+                        inputs[k] = v.to(self.device)
+
+                feats, scores_overlap, scores_saliency = self.model(inputs)  #[N1, C1], [N2, C2]
+                # scores_overlap = scores_overlap.detach().cpu()
+                # scores_saliency = scores_saliency.detach().cpu()
+
+                len_src = inputs['stack_lengths'][0][0]
+                c_rot, c_trans = inputs['rot'], inputs['trans']
+                M = np.concatenate([np.squeeze(c_rot.cpu().numpy()), np.squeeze(c_trans.cpu().numpy())], axis=1)
+                """
+                rot_gt.append(c_rot.cpu().numpy())
+                trans_gt.append(c_trans.cpu().numpy())
+                """
+                src_feats, tgt_feats = feats[:len_src].cpu().numpy(), feats[len_src:].cpu().numpy()
+                src_pcd , tgt_pcd = np.squeeze(inputs['src_pcd_raw'].cpu().numpy()), np.squeeze(inputs['tgt_pcd_raw'].cpu().numpy())
+                matching_inds = np.squeeze(inputs['correspondences'].cpu().numpy())
+                key = inputs['key']; id_name = key.split('_')[0]; save_name = '_'.join(key.split('_')[1:])+'.npy'
+                np.save(os.path.join(save_path, id_name, save_name), \
+                    {'src_feats':src_feats, 'tgt_feats':tgt_feats, 'src_pcd':src_pcd, 'tgt_pcd':tgt_pcd, \
+                        'matching_inds':matching_inds, 'M':M})
 
 
 class KITTITester(Trainer):
@@ -68,7 +118,6 @@ class KITTITester(Trainer):
         Trainer.__init__(self,args)
     
     def test(self):
-        print('Start to evaluate on test datasets...')
         tsfm_est = []
         num_iter = int(len(self.loader['test'].dataset) // self.loader['test'].batch_size)
         c_loader_iter = self.loader['test'].__iter__()
@@ -400,6 +449,8 @@ def get_trainer(config):
         return IndoorTester(config)
     elif(config.dataset == 'kitti'):
         return KITTITester(config)
+    elif(config.dataset == 'kitti_extractor'):
+        return KITTIExtractor(config)
     elif(config.dataset == 'modelnet'):
         return ModelnetTester(config)
     else:

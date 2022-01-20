@@ -8,6 +8,7 @@ from lib.timer import Timer
 from lib.utils import load_obj, natural_key
 from datasets.indoor import IndoorDataset
 from datasets.kitti import KITTIDataset
+from datasets.kitti_extractor import KITTIExtractorDataset
 from datasets.modelnet import get_train_datasets, get_test_datasets
 
 
@@ -74,7 +75,7 @@ def collate_fn_descriptor(list_data, config, neighborhood_limits):
     batched_lengths_list = []
     assert len(list_data) == 1
     
-    for ind, (src_pcd,tgt_pcd,src_feats,tgt_feats,rot,trans,matching_inds, src_pcd_raw, tgt_pcd_raw, sample) in enumerate(list_data):
+    for ind, (key, src_pcd,tgt_pcd,src_feats,tgt_feats,rot,trans,matching_inds, src_pcd_raw, tgt_pcd_raw, sample) in enumerate(list_data):
         batched_points_list.append(src_pcd)
         batched_points_list.append(tgt_pcd)
         batched_features_list.append(src_feats)
@@ -189,7 +190,8 @@ def collate_fn_descriptor(list_data, config, neighborhood_limits):
         'correspondences': matching_inds,
         'src_pcd_raw': torch.from_numpy(src_pcd_raw).float(),
         'tgt_pcd_raw': torch.from_numpy(tgt_pcd_raw).float(),
-        'sample': sample
+        'sample': sample,
+        'key': key
     }
 
     return dict_inputs
@@ -241,6 +243,10 @@ def get_datasets(config):
         train_set = KITTIDataset(config,'train',data_augmentation=True)
         val_set = KITTIDataset(config,'val',data_augmentation=False)
         benchmark_set = KITTIDataset(config, 'test',data_augmentation=False)
+    elif(config.dataset == 'kitti_extractor'):
+        train_set = KITTIExtractorDataset(config,'train',data_augmentation=False)
+        val_set = KITTIExtractorDataset(config,'val',data_augmentation=False)
+        benchmark_set = KITTIExtractorDataset(config, 'test',data_augmentation=False)
     elif(config.dataset=='modelnet'):
         train_set, val_set = get_train_datasets(config)
         benchmark_set = get_test_datasets(config)
