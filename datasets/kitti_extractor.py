@@ -23,7 +23,7 @@ class KITTIExtractorDataset(Dataset):
     }
     """
     def __init__(self,config,split,data_augmentation=True):
-        super(KITTIDataset,self).__init__()
+        super(KITTIExtractorDataset,self).__init__()
         self.config = config
         self.root = os.path.join(config.root,'dataset')
         self.icp_path = os.path.join(config.root,'icp')
@@ -40,8 +40,8 @@ class KITTIExtractorDataset(Dataset):
         self.augment_scale_min = config.augment_scale_min
 
         # Initiate containers
-        self.pairs_list_file = os.path.join(self.root, 'pairs.txt')
-        self.files = np.loadtxt(self.pairs_list_file)
+        self.pairs_list_file = os.path.join(self.root, 'test_pairs.txt')
+        self.files = np.loadtxt(self.pairs_list_file, dtype=np.str)
         self.kitti_icp_cache = {}
         self.kitti_cache = {}
         """
@@ -107,7 +107,7 @@ class KITTIExtractorDataset(Dataset):
         xyz1 = xyzr1[:, :3]
 
         # use ICP to refine the ground_truth pose, for ICP we don't voxllize the point clouds
-        key = '%d_%d_%d' % (drive, t0, t1)
+        key = '%s_%s_%s' % (drive, t0, t1)
         filename = self.icp_path + '/' + key + '.npy'
         if key not in self.kitti_icp_cache:
             if not os.path.exists(filename):
@@ -125,7 +125,7 @@ class KITTIExtractorDataset(Dataset):
                 # np.save(filename, M2)
             else:
                 M2 = np.load(filename)
-            self.kitti_icp_cache[key] = M2
+            # self.kitti_icp_cache[key] = M2
         else:
             M2 = self.kitti_icp_cache[key]
 
@@ -206,7 +206,7 @@ class KITTIExtractorDataset(Dataset):
             self._velo2cam = np.vstack((velo2cam, [0, 0, 0, 1])).T
         return self._velo2cam
 
-    def get_video_odometry(self, drive, indices=None, ext='.txt', return_all=False):
+    def get_video_odometry(self, drive, indices=None, ext='.txt', return_all=True):
         if self.IS_ODOMETRY:
             data_path = self.root + '/poses/%s.txt' % drive
             if data_path not in self.kitti_cache:

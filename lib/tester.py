@@ -1,6 +1,7 @@
 from numpy.lib.npyio import save
 from lib.trainer import Trainer
 import os, torch
+import sys
 from tqdm import tqdm
 import numpy as np
 from lib.benchmark_utils import ransac_pose_estimation, random_sample, get_angle_deviation, to_o3d_pcd, to_array
@@ -69,7 +70,8 @@ class KITTIExtractor(Trainer):
             os.makedirs(save_path)
         for id_name in range(11):
             id_name = str(id_name).zfill(2)
-            os.makedirs(os.path.join(save_path, id_name))
+            if not os.path.exists(os.path.join(save_path, id_name)):
+                os.makedirs(os.path.join(save_path, id_name))
         print('Start to represetations on KITTI datasets on: '+save_path)
         tsfm_est = []
         num_iter = int(len(self.loader['test'].dataset) // self.loader['test'].batch_size)
@@ -80,6 +82,8 @@ class KITTIExtractor(Trainer):
         with torch.no_grad():
             for _ in tqdm(range(num_iter)): # loop through this epoch
                 inputs = c_loader_iter.next()
+                print(inputs['key'])
+                sys.stdout.flush()
                 ###############################################
                 # forward pass
                 for k, v in inputs.items():  
@@ -96,7 +100,8 @@ class KITTIExtractor(Trainer):
 
                 len_src = inputs['stack_lengths'][0][0]
                 c_rot, c_trans = inputs['rot'], inputs['trans']
-                M = np.concatenate([np.squeeze(c_rot.cpu().numpy()), np.squeeze(c_trans.cpu().numpy())], axis=1)
+                # print('shape is: '+str(c_rot.shape)+' '+str(c_trans.shape))
+                M = np.concatenate([c_rot.cpu().numpy(), c_trans.cpu().numpy()], axis=1)
                 """
                 rot_gt.append(c_rot.cpu().numpy())
                 trans_gt.append(c_trans.cpu().numpy())

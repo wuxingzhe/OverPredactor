@@ -61,7 +61,7 @@ optimiser:
 dataset:
   dataset: kitti_extractor
   benchmark: odometryKITTI
-  root: 
+  root:  /home2/wuxingzhe/KITTI
   batch_size: 1 
   num_workers: 6
   augment_noise: 0.01

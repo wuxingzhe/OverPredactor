@@ -20,9 +20,9 @@ if __name__ == '__main__':
     parser.add_argument('config', type=str, help= 'Path to the config file.')
     args = parser.parse_args()
     config = load_config(args.config)
-    # config['snapshot_dir'] = 'snapshot/%s' % config['exp_dir']
-    # config['tboard_dir'] = 'snapshot/%s/tensorboard' % config['exp_dir']
-    # config['save_dir'] = 'snapshot/%s/checkpoints' % config['exp_dir']
+    config['snapshot_dir'] = 'snapshot/%s' % config['exp_dir']
+    config['tboard_dir'] = 'snapshot/%s/tensorboard' % config['exp_dir']
+    config['save_dir'] = 'snapshot/%s/checkpoints' % config['exp_dir']
     config = edict(config)
 
     # os.makedirs(config.snapshot_dir, exist_ok=True)
@@ -33,6 +33,7 @@ if __name__ == '__main__':
         open(os.path.join(config.root, 'config.json'), 'w'),
         indent=4,
     )
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
     if config.gpu_mode:
         config.device = torch.device('cuda')
     else:
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     
     
     # model initialization
-    config.architecture = architectures[config.dataset]
+    config.architecture = architectures['kitti']
     config.model = KPFCNN(config)   
 
     # create optimizer 
@@ -73,6 +74,7 @@ if __name__ == '__main__':
     
     # create dataset and dataloader
     train_set, val_set, benchmark_set = get_datasets(config)
+    """
     config.train_loader, neighborhood_limits = get_dataloader(dataset=train_set,
                                         batch_size=config.batch_size,
                                         shuffle=True,
@@ -84,11 +86,12 @@ if __name__ == '__main__':
                                         num_workers=1,
                                         neighborhood_limits=neighborhood_limits
                                         )
-    config.test_loader, _ = get_dataloader(dataset=benchmark_set,
+    """
+    config.train_loader = None; config.val_loader = None
+    config.test_loader, neighborhood_limits = get_dataloader(dataset=benchmark_set,
                                         batch_size=config.batch_size,
                                         shuffle=False,
-                                        num_workers=1,
-                                        neighborhood_limits=neighborhood_limits)
+                                        num_workers=1)
     
     # create evaluation metrics
     config.desc_loss = MetricLoss(config)
